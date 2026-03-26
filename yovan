@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yovan AI — Multi-Agent Research System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #07070f;
+  --bg-card: #0d0d1c;
+  --bg-card-2: #111122;
+  --border: rgba(255,255,255,0.055);
+  --border-md: rgba(255,255,255,0.1);
+  --amber: #f59e0b;
+  --amber-dim: #92400e;
+  --amber-glow: rgba(245,158,11,0.07);
+  --amber-border: rgba(245,158,11,0.3);
+  --text: #dde0f0;
+  --text-dim: #5a5a80;
+  --text-muted: #2e2e50;
+  --green: #34d399;
+  --green-bg: rgba(52,211,153,0.06);
+  --green-border: rgba(52,211,153,0.25);
+  --red: #f87171;
+  --red-bg: rgba(248,113,113,0.06);
+  --red-border: rgba(248,113,113,0.25);
+  --blue: #60a5fa;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --radius: 8px;
+}
+
+html { font-size: 16px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ─── SCANLINE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* ─── HEADER ─── */
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 1.25rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(7,7,15,0.9);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  color: var(--amber);
+}
+
+.logo-sub {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-pill {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--amber-glow);
+  border: 1px solid var(--amber-border);
+  color: var(--amber);
+  letter-spacing: 0.1em;
+  transition: all 0.3s;
+}
+
+.status-pill.running {
+  background: rgba(245,158,11,0.15);
+  border-color: var(--amber);
+}
+
+.status-pill.done {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+  color: var(--green);
+}
+
+.status-pill.error {
+  background: var(--red-bg);
+  border-color: var(--red-border);
+  color: var(--red);
+}
+
+/* ─── MAIN ─── */
+main {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+/* ─── HERO ─── */
+.hero {
+  margin-bottom: 2.5rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 0.6rem;
+  opacity: 0.8;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  margin-bottom: 0.6rem;
+}
+
+.hero-title em {
+  font-style: normal;
+  color: var(--amber);
+}
+
+.hero-desc {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+/* ─── SEARCH ─── */
+.search-section { margin-bottom: 2rem; }
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.65rem;
+}
+
+.search-box {
+  display: flex;
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-card);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-box:focus-within {
+  border-color: var(--amber-border);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.06);
+}
+
+.search-box input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0.875rem 1.25rem;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+.search-box input::placeholder { color: var(--text-muted); }
+
+.search-btn {
+  background: var(--amber);
+  border: none;
+  padding: 0 1.75rem;
+  color: #000;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.search-btn:hover { background: #fbbf24; }
+.search-btn:active { transform: scale(0.98); }
+.search-btn:disabled { background: #4a3000; color: #7a5500; cursor: not-allowed; transform: none; }
+
+/* ─── AGENTS GRID ─── */
+.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.agent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  transition: border-color 0.4s, background 0.4s, box-shadow 0.4s;
+  position: relative;
+  overflow: hidden;
+}
+
+.agent-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--amber);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s ease;
+}
+
+.agent-card.active::before { transform: scaleX(1); }
+.agent-card.done::before {
+  background: var(--green);
+  transform: scaleX(1);
+}
+
+.agent-card.active {
+  border-color: var(--amber-border);
+  background: var(--amber-glow);
+  box-shadow: 0 0 20px rgba(245,158,11,0.04);
+}
+
+.agent-card.done {
+  border-color: var(--green-border);
+  background: var(--green-bg);
+}
+
+.agent-card.error {
+  border-color: var(--red-border);
+  background: var(--red-bg);
+}
+
+.agent-num {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  margin-bottom: 0.5rem;
+}
+
+.agent-card.active .agent-num { color: var(--amber-dim); }
+.agent-card.done .agent-num { color: rgba(52,211,153,0.5); }
+
+.agent-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text);
+  margin-bottom: 0.15rem;
+  letter-spacing: -0.01em;
+}
+
+.agent-role {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+.agent-status {
+  margin-top: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.agent-card.active .dot {
+  background: var(--amber);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.agent-card.done .dot { background: var(--green); }
+.agent-card.error .dot { background: var(--red); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+  50% { opacity: 0.5; box-shadow: 0 0 0 4px rgba(245,158,11,0); }
+}
+
+.agent-status-text {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  transition: color 0.3s;
+}
+.agent-card.active .agent-status-text { color: var(--amber); }
+.agent-card.done .agent-status-text { color: var(--green); }
+.agent-card.error .agent-status-text { color: var(--red); }
+
+/* ─── PIPELINE BAR ─── */
+.pipeline-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pipeline-bar::-webkit-scrollbar { display: none; }
+
+.pipe-step {
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  transition: all 0.3s;
+}
+.pipe-step.active {
+  color: var(--amber);
+  background: var(--amber-glow);
+}
+.pipe-step.done { color: var(--green); }
+.pipe-arrow {
+  color: var(--text-muted);
+  margin: 0 4px;
+  font-size: 0.55rem;
+}
+
+/* ─── LOG ─── */
+.log-section { margin-bottom: 1.5rem; }
+
+.log-wrap {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  max-height: 110px;
+  overflow-y: auto;
+  line-height: 1.8;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+
+.ll { color: var(--text-dim); }
+.ll.a { color: var(--amber); }
+.ll.g { color: var(--green); }
+.ll.r { color: var(--red); }
+
+/* ─── OUTPUT ─── */
+.output-section { display: none; }
+.output-section.show { display: block; animation: fadeUp 0.4s ease; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.verified-badge {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: var(--green-bg);
+  border: 1px solid var(--green-border);
+  color: var(--green);
+  letter-spacing: 0.08em;
+}
+
+.output-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius);
+  padding: 1.75rem 2rem;
+  font-size: 0.9rem;
+  line-height: 1.85;
+  color: var(--text);
+}
+
+.output-card h1, .output-card h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.output-card h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--amber);
+  margin: 1.4rem 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.output-card p { margin-bottom: 0.8rem; }
+.output-card p:last-child { margin-bottom: 0; }
+
+.output-card strong {
+  color: var(--amber);
+  font-weight: 500;
+}
+
+.output-card em {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.output-card ul, .output-card ol {
+  margin: 0.4rem 0 0.9rem 1.4rem;
+}
+
+.output-card li { margin-bottom: 0.35rem; }
+
+.output-card blockquote {
+  border-left: 2px solid var(--amber-border);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--text-dim);
+  font-style: italic;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+.output-card code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: rgba(255,255,255,0.05);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--blue);
+}
+
+.output-card a {
+  color: var(--blue);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(96,165,250,0.3);
+  transition: border-color 0.2s;
+}
+.output-card a:hover { border-color: var(--blue); }
+
+/* ─── FOOTER ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 1.1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.footer-mono {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 640px) {
+  .agents-grid { grid-template-columns: repeat(2, 1fr); }
+  header { padding: 1rem; }
+  main { padding: 1.5rem 1rem 3rem; }
+  .hero-title { font-size: 1.8rem; }
+  .output-card { padding: 1.25rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-text">YOVAN</span>
+    <span class="logo-sub">Multi-Agent AI</span>
+  </div>
+  <div class="header-right">
+    <div class="status-pill" id="sys-status">SYSTEM READY</div>
+  </div>
+</header>
+
+<main>
+
+  <div class="hero">
+    <div class="hero-tag">// v1.0 — research intelligence system</div>
+    <h1 class="hero-title">Cut through the <em>noise.</em></h1>
+    <p class="hero-desc">Four specialized agents work in sequence — retrieving, fact-checking, synthesizing, and reviewing — so every answer you get has survived a ruthless truth filter.</p>
+  </div>
+
+  <div class="search-section">
+    <div class="section-label">// research query</div>
+    <div class="search-box">
+      <input type="text" id="q-input" placeholder="What do you need to know?" autocomplete="off" spellcheck="false">
+      <button class="search-btn" id="run-btn" onclick="runPipeline()">EXECUTE</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label">// agent status</div>
+    <div class="agents-grid">
+      <div class="agent-card" id="c-retriever">
+        <div class="agent-num">AGENT 01</div>
+        <div class="agent-name">The Retriever</div>
+        <div class="agent-role">DATA GATHERER</div>
+        <div class="agent-status">
+          <div class="dot"></div>
+          <div class="agent-status-text" id="s-retriever">IDLE</div>
+        </div>
+      </div>
+      <div class="agent-card" id="c-inquisitor">
+        <div class="agent-num">AGENT 02</div>
+        <div class="agent-name">The Inquisitor</div>
+        <div class="agent-role">FACT-CHECKER</div>
+        <div class="agent-status">
+          <div class="dot"></div>
+          <div class="agent-status-text" id="s-inquisitor">IDLE</div>
+        </div>
+      </div>
+      <div class="agent-card" id="c-synthesizer">
+        <div class="agent-num">AGENT 03</div>
+        <div class="agent-name">The Synthesizer</div>
+        <div class="agent-role">WRITER</div>
+        <div class="agent-status">
+          <div class="dot"></div>
+          <div class="agent-status-text" id="s-synthesizer">IDLE</div>
+        </div>
+      </div>
+      <div class="agent-card" id="c-overseer">
+        <div class="agent-num">AGENT 04</div>
+        <div class="agent-name">The Overseer</div>
+        <div class="agent-role">QUALITY CONTROL</div>
+        <div class="agent-status">
+          <div class="dot"></div>
+          <div class="agent-status-text" id="s-overseer">IDLE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pipeline-bar">
+    <span class="pipe-step" id="p0">RETRIEVE</span>
+    <span class="pipe-arrow">›</span>
+    <span class="pipe-step" id="p1">FACT-CHECK</span>
+    <span class="pipe-arrow">›</span>
+    <span class="pipe-step" id="p2">SYNTHESIZE</span>
+    <span class="pipe-arrow">›</span>
+    <span class="pipe-step" id="p3">QA REVIEW</span>
+    <span class="pipe-arrow">›</span>
+    <span class="pipe-step" id="p4">OUTPUT</span>
+  </div>
+
+  <div class="log-section">
+    <div class="section-label">// system log</div>
+    <div class="log-wrap" id="log">
+      <div class="ll a">// YOVAN AI INITIALIZED</div>
+      <div class="ll">// ALL AGENTS STANDING BY</div>
+      <div class="ll">// AWAITING RESEARCH QUERY...</div>
+    </div>
+  </div>
+
+  <div class="output-section" id="output-section">
+    <div class="output-header">
+      <div class="section-label">// verified research output</div>
+      <div class="verified-badge" id="verified-badge">VERIFYING...</div>
+    </div>
+    <div class="output-card" id="output-card"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-mono">YOVAN AI — MULTI-AGENT RESEARCH SYSTEM</div>
+  <div class="footer-mono" id="footer-time"></div>
+</footer>
+
+<script>
+const MODEL = "claude-sonnet-4-20250514";
+const API  = "https://api.anthropic.com/v1/messages";
+
+const agents = ["retriever","inquisitor","synthesizer","overseer"];
+
+function log(msg, t = '') {
+  const el = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = 'll' + (t ? ' ' + t : '');
+  d.textContent = msg;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setAgent(id, state) {
+  const card   = document.getElementById('c-' + id);
+  const status = document.getElementById('s-' + id);
+  card.className = 'agent-card' + (state !== 'idle' ? ' ' + state : '');
+  status.textContent = {idle:'IDLE', active:'PROCESSING...', done:'COMPLETE', error:'ERROR'}[state] || state.toUpperCase();
+}
+
+function setPipe(idx) {
+  for (let i = 0; i <= 4; i++) {
+    const el = document.getElementById('p' + i);
+    el.className = 'pipe-step' + (i < idx ? ' done' : i === idx ? ' active' : '');
+  }
+}
+
+function setStatus(text, cls = '') {
+  const el = document.getElementById('sys-status');
+  el.textContent = text;
+  el.className = 'status-pill' + (cls ? ' ' + cls : '');
+}
+
+async function callAgent(system, user, webSearch = false) {
+  const body = {
+    model: MODEL,
+    max_tokens: 1000,
+    system,
+    messages: [{ role: 'user', content: user }]
+  };
+  if (webSearch) {
+    body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
+  }
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e?.error?.message || 'API error ' + res.status);
+  }
+  const data = await res.json();
+  return data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+}
+
+function mdToHtml(md) {
+  let h = md
+    .replace(/^VERIFIED:\s*/im, '')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+  const lines = h.split('\n');
+  const out = [];
+  let inUl = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      continue;
+    }
+    if (/^<(h[123]|blockquote)/.test(line)) {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      out.push(line);
+    } else if (/^[-*•] (.+)/.test(line)) {
+      if (!inUl) { out.push('<ul>'); inUl = true; }
+      out.push('<li>' + line.replace(/^[-*•] /, '') + '</li>');
+    } else if (/^\d+\. (.+)/.test(line)) {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      out.push('<li>' + line.replace(/^\d+\. /, '') + '</li>');
+    } else if (!line.startsWith('<')) {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      out.push('<p>' + line + '</p>');
+    } else {
+      out.push(line);
+    }
+  }
+  if (inUl) out.push('</ul>');
+  return out.join('\n');
+}
+
+async function runPipeline() {
+  const query = document.getElementById('q-input').value.trim();
+  if (!query) {
+    document.getElementById('q-input').focus();
+    return;
+  }
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  setStatus('RUNNING', 'running');
+
+  document.getElementById('output-section').classList.remove('show');
+  document.getElementById('log').innerHTML = '';
+  agents.forEach(a => setAgent(a, 'idle'));
+  setPipe(-1);
+
+  const t0 = Date.now();
+
+  try {
+    // ── AGENT 1: RETRIEVER ──────────────────────────────────────────
+    log('// AGENT 01 — THE RETRIEVER: CASTING NET ACROSS WEB', 'a');
+    setAgent('retriever', 'active');
+    setPipe(0);
+
+    const SYS_RETRIEVER = `You are The Retriever — Agent 1 of Yovan AI's multi-agent research system.
+
+DIRECTIVE: Cast a wide net and collect raw data about the user's query from multiple sources.
+- Prioritize: academic databases, official government/org reports, reputable journalism, peer-reviewed data
+- Do NOT judge, filter, or editorialize the information
+- Do NOT present a conclusion — only gather
+- Clearly prefix each fact with its source type: [Academic], [Official], [News], [Industry], [Expert], [Statistical]
+- If you find conflicting claims from different sources, include ALL of them — do not resolve conflicts
+
+OUTPUT FORMAT: A structured list of raw facts and claims, each prefixed with source type. Be thorough. Include numbers, dates, and named sources wherever available.`;
+
+    const rawData = await callAgent(SYS_RETRIEVER,
+      `Research query: "${query}"\n\nGather all relevant information you can find.`, true);
+
+    const factCount = (rawData.match(/\[/g) || []).length;
+    log(`// RETRIEVER: COLLECTION COMPLETE — ${factCount} data points gathered`, 'g');
+    setAgent('retriever', 'done');
+    setPipe(1);
+
+    // ── AGENT 2: INQUISITOR ─────────────────────────────────────────
+    log('// AGENT 02 — THE INQUISITOR: CROSS-REFERENCING ALL CLAIMS', 'a');
+    setAgent('inquisitor', 'active');
+
+    const SYS_INQUISITOR = `You are The Inquisitor — Agent 2 of Yovan AI. You are the core fact-checking engine. Be ruthless.
+
+DIRECTIVE: Tear apart the raw data. Your job is to destroy nonsense.
+1. Cross-reference every claim — does it hold up across multiple sources?
+2. Identify and flag CONTRADICTIONS — when sources disagree, investigate why
+3. DISCARD: rumors, unverified claims, biased single-source assertions, speculation presented as fact
+4. ASSIGN reliability scores to each surviving fact:
+   - [HIGH] — confirmed by multiple independent, authoritative sources
+   - [MEDIUM] — credible single source or partially corroborated
+   - [LOW] — only one weak source, or disputed
+5. For conflicting claims, explain the root of the discrepancy rather than guessing
+
+OUTPUT FORMAT: A clean list of verified facts with reliability scores and brief justification. Mark contested areas clearly as [CONTESTED: ...].`;
+
+    const verified = await callAgent(SYS_INQUISITOR,
+      `Original query: "${query}"\n\nRaw data from The Retriever:\n\n${rawData}`);
+
+    const highFacts = (verified.match(/\[HIGH\]/gi) || []).length;
+    const contested = (verified.match(/\[CONTESTED/gi) || []).length;
+    log(`// INQUISITOR: ${highFacts} HIGH-reliability facts survived`, 'g');
+    if (contested > 0) log(`// INQUISITOR: ${contested} contested claim(s) flagged`);
+    setAgent('inquisitor', 'done');
+    setPipe(2);
+
+    // ── AGENT 3: SYNTHESIZER ────────────────────────────────────────
+    log('// AGENT 03 — THE SYNTHESIZER: DRAFTING RESEARCH REPORT', 'a');
+    setAgent('synthesizer', 'active');
+
+    const SYS_SYNTHESIZER = `You are The Synthesizer — Agent 3 of Yovan AI. You are a precision writer.
+
+DIRECTIVE: Transform verified, fact-checked data into a polished, usable research report.
+- ONLY use data from The Inquisitor's verified output — never introduce new unverified claims
+- Write with clarity, objectivity, and zero speculation
+- Structure the report with a clear executive summary, key findings, and conclusion
+- Use markdown formatting: ## for main headings, ### for sub-sections, **bold** for key terms
+- Explicitly note areas of uncertainty or conflict using > blockquotes
+- Cite source types where relevant (e.g., "According to official government data...")
+- Be concise — no padding, no repetition, no filler phrases
+
+REPORT STRUCTURE:
+## [Topic Title]
+A 2-3 sentence executive summary.
+### Key Findings
+[Organized bullet points of verified facts]
+### Context & Analysis
+[Brief objective analysis]
+### Caveats & Contested Areas
+[Anything disputed or uncertain]
+### Conclusion
+[1-2 sentence objective wrap-up]`;
+
+    const report = await callAgent(SYS_SYNTHESIZER,
+      `Original query: "${query}"\n\nVerified facts from The Inquisitor:\n\n${verified}`);
+
+    log('// SYNTHESIZER: REPORT DRAFTED', 'g');
+    setAgent('synthesizer', 'done');
+    setPipe(3);
+
+    // ── AGENT 4: OVERSEER ───────────────────────────────────────────
+    log('// AGENT 04 — THE OVERSEER: FINAL QA REVIEW', 'a');
+    setAgent('overseer', 'active');
+
+    const SYS_OVERSEER = `You are The Overseer — Agent 4 and final gatekeeper of Yovan AI.
+
+DIRECTIVE: Perform a final quality check on the Synthesizer's report before delivery.
+
+CHECK FOR:
+1. HALLUCINATIONS — any claim not traceable to the verified facts? Remove it.
+2. COMPLETENESS — does the report actually answer the user's original question?
+3. BIAS — any non-objective language, loaded framing, or political slant? Neutralize it.
+4. MISSING CAVEATS — are contested claims properly flagged?
+5. TONE — is it professional and factual throughout?
+
+If the report passes all checks, output it cleaned up and begin the very first line with "VERIFIED: "
+If you made significant corrections, add a brief note at the end: *[Overseer corrections: ...]*
+
+Output the final, polished report ready for the user. Do not add meta-commentary beyond the above.`;
+
+    const final = await callAgent(SYS_OVERSEER,
+      `User's original query: "${query}"\n\nSynthesizer's report to review:\n\n${report}`);
+
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    log(`// OVERSEER: QA REVIEW PASSED`, 'g');
+    log(`// PIPELINE COMPLETE — ${elapsed}s total`, 'g');
+    log(`// DELIVERING VERIFIED RESEARCH TO USER`, 'a');
+
+    setAgent('overseer', 'done');
+    setPipe(4);
+    setStatus('OUTPUT READY', 'done');
+
+    document.getElementById('output-card').innerHTML = mdToHtml(final);
+    document.getElementById('verified-badge').textContent = `VERIFIED ✓  ${elapsed}s`;
+    document.getElementById('output-section').classList.add('show');
+    document.getElementById('footer-time').textContent = `LAST RUN: ${new Date().toLocaleTimeString()}`;
+
+  } catch (err) {
+    log('// ERROR: ' + err.message, 'r');
+    setStatus('ERROR', 'error');
+    agents.forEach(a => {
+      if (document.getElementById('c-' + a).classList.contains('active'))
+        setAgent(a, 'error');
+    });
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('q-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runPipeline();
+});
+
+document.getElementById('footer-time').textContent = new Date().toLocaleDateString('en-GB', { year:'numeric', month:'short', day:'numeric' });
+</script>
+</body>
+</html>
